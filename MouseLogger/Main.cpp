@@ -4,6 +4,7 @@
 #include <time.h>
 #include <stdio.h>
 #include <chrono>
+#include <string>
 
 using namespace std;
 
@@ -16,7 +17,23 @@ DWORD fWritten;
 WCHAR keyChar;
 HANDLE hFile;
 //LPCWSTR fName = L"C:/Users/Hugo/source/repos/MouseLogger/Debug/mouse.log"; //GetTempPath 
-LPCWSTR fName = L"mouse.log"; //GetTempPath
+//LPCWSTR fName = L"data/mouse.log"; //GetTempPath
+
+/*
+std::wstring name(L"put_time_here");
+std::wstring concatted_stdstr = L"data/" + name + L".log";
+LPCWSTR fName = concatted_stdstr.c_str();*/
+
+UINT64 next_file_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+wchar_t tmp_buffer[50];
+wchar_t * current_timestamp = _i64tow(next_file_timestamp, tmp_buffer, 10);
+
+std::wstring name(current_timestamp);
+std::wstring concatted_stdstr = L"data/" + name + L".log";
+LPCWSTR fName = concatted_stdstr.c_str();
+
+UINT64 new_file_period = 3600000;  // in milliseconds
+
 INT len;
 CHAR p_window_title[256] = "";
 CHAR active_window_title[256] = "";
@@ -26,6 +43,8 @@ RAWINPUTDEVICE rid;
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
+	next_file_timestamp = next_file_timestamp + new_file_period;
+
 	MSG msg = { 0 };
 	WNDCLASS wc = { 0 };
 
@@ -58,8 +77,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 
 		// register interest in raw data
-		rid.dwFlags = RIDEV_NOLEGACY | RIDEV_INPUTSINK;	// ignore legacy messages, hotkeys and receive system wide keystrokes	
-		rid.usUsagePage = 1;											// raw keyboard data only
+		rid.dwFlags = RIDEV_NOLEGACY | RIDEV_INPUTSINK;	
+		rid.usUsagePage = 1;
 		rid.usUsage = 2;
 		rid.hwndTarget = hWnd;
 		RegisterRawInputDevices(&rid, 1, sizeof(rid));
@@ -90,6 +109,26 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			PostQuitMessage(0);
 			break;
 		}
+		
+		// Check the time to see if we have to create a new file or not
+		UINT64 current_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+		if (current_timestamp > next_file_timestamp) {
+			wchar_t tmp_buffer[50];
+			wchar_t* current_timestamp_str = _i64tow(next_file_timestamp, tmp_buffer, 10);
+
+			std::wstring name(current_timestamp_str);
+			std::wstring concatted_stdstr = L"data/" + name + L".log";
+			fName = concatted_stdstr.c_str();
+
+			CloseHandle(hFile);
+			hFile = CreateFile(fName, GENERIC_WRITE, FILE_SHARE_READ, 0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+			if (hFile == INVALID_HANDLE_VALUE) {
+				PostQuitMessage(0);
+				break;
+			}
+		}
+		next_file_timestamp = current_timestamp + new_file_period;
 
 		PRAWINPUT raw = (PRAWINPUT)lpb;
 		//UINT Event;
@@ -107,7 +146,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			raw->data.mouse.ulExtraInformation);
 		*/
 
-		unsigned __int64 now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+		//UINT64 now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
 		/*
 		sprintf(wt, "%lld,%04x,%04x,%04x,%ld,%ld,%ld,%ld,%04x\r\n",
@@ -123,7 +162,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		*/
 
 		sprintf(wt, "%lld,%04x,%04x,%ld,%ld\r\n",
-			now,
+			current_timestamp,
 			raw->data.mouse.usButtonFlags,
 			raw->data.mouse.usButtonData,
 			raw->data.mouse.lLastX,

@@ -1,0 +1,14 @@
+﻿[ResourceMetadata]
+"ResourceDimensions"		"scale-200"
+"ResourceDimensions"		"language-en-us"
+
+[Files]
+"C:\Users\Hugo\source\repos\MouseLogger\PackagingProject\obj\x64\Debug\filemap.pri"			"resources.pri"
+"C:\Users\Hugo\source\repos\MouseLogger\PackagingProject\obj\x64\Debug\PackageLayout\MouseLogger\MouseLogger.exe"			"MouseLogger\MouseLogger.exe"
+"C:\Users\Hugo\source\repos\MouseLogger\PackagingProject\obj\x64\Debug\PackageLayout\Images\Wide310x150Logo.scale-200.png"			"Images\Wide310x150Logo.scale-200.png"
+"C:\Users\Hugo\source\repos\MouseLogger\PackagingProject\obj\x64\Debug\PackageLayout\Images\StoreLogo.png"			"Images\StoreLogo.png"
+"C:\Users\Hugo\source\repos\MouseLogger\PackagingProject\obj\x64\Debug\PackageLayout\Images\Square44x44Logo.targetsize-24_altform-unplated.png"			"Images\Square44x44Logo.targetsize-24_altform-unplated.png"
+"C:\Users\Hugo\source\repos\MouseLogger\PackagingProject\obj\x64\Debug\PackageLayout\Images\Square44x44Logo.scale-200.png"			"Images\Square44x44Logo.scale-200.png"
+"C:\Users\Hugo\source\repos\MouseLogger\PackagingProject\obj\x64\Debug\PackageLayout\Images\Square150x150Logo.scale-200.png"			"Images\Square150x150Logo.scale-200.png"
+"C:\Users\Hugo\source\repos\MouseLogger\PackagingProject\obj\x64\Debug\PackageLayout\Images\SplashScreen.scale-200.png"			"Images\SplashScreen.scale-200.png"
+"C:\Users\Hugo\source\repos\MouseLogger\PackagingProject\obj\x64\Debug\PackageLayout\Images\LockScreenLogo.scale-200.png"			"Images\LockScreenLogo.scale-200.png"

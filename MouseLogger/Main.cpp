@@ -8,7 +8,6 @@
 
 using namespace std;
 
-// prototype
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 HWND hWnd, hActiveWindow, hPrevWindow;
@@ -16,36 +15,29 @@ UINT dwSize;
 DWORD fWritten;
 WCHAR keyChar;
 HANDLE hFile;
-//LPCWSTR fName = L"C:/Users/Hugo/source/repos/MouseLogger/Debug/mouse.log"; //GetTempPath 
-//LPCWSTR fName = L"data/mouse.log"; //GetTempPath
 
-/*
-std::wstring name(L"put_time_here");
-std::wstring concatted_stdstr = L"data/" + name + L".log";
-LPCWSTR fName = concatted_stdstr.c_str();*/
+UINT64 nextFileTimestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+wchar_t tempBuffer[50];
+wchar_t * currentTimestamp = _i64tow(nextFileTimestamp, tempBuffer, 10);
 
-UINT64 next_file_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-wchar_t tmp_buffer[50];
-wchar_t * current_timestamp = _i64tow(next_file_timestamp, tmp_buffer, 10);
+std::wstring name(currentTimestamp);
+std::wstring concattedStdstr = L"data/" + name + L".log";
+LPCWSTR fName = concattedStdstr.c_str();
 
-std::wstring name(current_timestamp);
-std::wstring concatted_stdstr = L"data/" + name + L".log";
-LPCWSTR fName = concatted_stdstr.c_str();
-
-UINT64 new_file_period = 3600000;  // in milliseconds
+UINT64 newFilePeriod = 3600000;  // in milliseconds
 
 INT len;
-CHAR p_window_title[256] = "";
-CHAR active_window_title[256] = "";
-CHAR* tmp_buf;
-CHAR tmp_buf_len = 0;
+CHAR pWindowTitle[256] = "";
+CHAR activeWindowTitle[256] = "";
+CHAR* tmpBuf;
+CHAR tmpBufLen = 0;
 RAWINPUTDEVICE rid;
 
-POINT pt;                  // cursor location  
+POINT cursorPoint;  
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
-	next_file_timestamp = next_file_timestamp + new_file_period;
+	nextFileTimestamp = nextFileTimestamp + newFilePeriod;
 
 	MSG msg = { 0 };
 	WNDCLASS wc = { 0 };
@@ -113,15 +105,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		
 		// Check the time to see if we have to create a new file or not
-		UINT64 current_timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+		UINT64 currentTimestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
-		if (current_timestamp > next_file_timestamp) {
-			wchar_t tmp_buffer[50];
-			wchar_t* current_timestamp_str = _i64tow(next_file_timestamp, tmp_buffer, 10);
+		if (currentTimestamp > nextFileTimestamp) {
+			wchar_t tempBuffer[50];
+			wchar_t* currentTimestampStr = _i64tow(nextFileTimestamp, tempBuffer, 10);
 
-			std::wstring name(current_timestamp_str);
-			std::wstring concatted_stdstr = L"data/" + name + L".log";
-			fName = concatted_stdstr.c_str();
+			std::wstring name(currentTimestampStr);
+			std::wstring concattedStdstr = L"data/" + name + L".log";
+			fName = concattedStdstr.c_str();
 
 			CloseHandle(hFile);
 			hFile = CreateFile(fName, GENERIC_WRITE, FILE_SHARE_READ, 0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
@@ -130,52 +122,23 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				break;
 			}
 		}
-		next_file_timestamp = current_timestamp + new_file_period;
+		nextFileTimestamp = currentTimestamp + newFilePeriod;
 
 		PRAWINPUT raw = (PRAWINPUT)lpb;
-		//UINT Event;
 		CHAR wt[300] = "";
-
-		/*
-		sprintf(wt, "Mouse: usFlags=%04x ulButtons=%04x usButtonFlags=%04x usButtonData=%04x ulRawButtons=%04x lLastX=%04x lLastY=%04x ulExtraInformation=%04x\r\n",
-			raw->data.mouse.usFlags,
-			raw->data.mouse.ulButtons,
-			raw->data.mouse.usButtonFlags,
-			raw->data.mouse.usButtonData,
-			raw->data.mouse.ulRawButtons,
-			raw->data.mouse.lLastX,
-			raw->data.mouse.lLastY,
-			raw->data.mouse.ulExtraInformation);
-		*/
-
-		//UINT64 now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-
-		/*
-		sprintf(wt, "%lld,%04x,%04x,%04x,%ld,%ld,%ld,%ld,%04x\r\n",
-			now,
-			raw->data.mouse.usFlags,
-			raw->data.mouse.ulButtons,
-			raw->data.mouse.usButtonFlags,
-			raw->data.mouse.usButtonData,
-			raw->data.mouse.ulRawButtons,
-			raw->data.mouse.lLastX,
-			raw->data.mouse.lLastY,
-			raw->data.mouse.ulExtraInformation);
-		*/
-
-		GetCursorPos(&pt);
+		GetCursorPos(&cursorPoint);
 
 		sprintf(wt, "%lld,%04x,%04x,%ld,%ld,%ld,%ld\r\n",
-			current_timestamp,
+			currentTimestamp,
 			raw->data.mouse.usButtonFlags,
 			raw->data.mouse.usButtonData,
 			raw->data.mouse.lLastX,
 			raw->data.mouse.lLastY,
-			pt.x,
-			pt.y);
+			cursorPoint.x,
+			cursorPoint.y);
 
 		WriteFile(hFile, wt, strlen(wt), &fWritten, 0);
-		delete[] lpb;	// free this now
+		delete[] lpb;  // free this now
 		return 0;
 
 	}// end case WM_INPUT

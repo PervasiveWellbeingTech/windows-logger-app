@@ -41,6 +41,8 @@ CHAR* tmp_buf;
 CHAR tmp_buf_len = 0;
 RAWINPUTDEVICE rid;
 
+POINT pt;                  // cursor location  
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
 	next_file_timestamp = next_file_timestamp + new_file_period;
@@ -161,17 +163,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			raw->data.mouse.ulExtraInformation);
 		*/
 
-		sprintf(wt, "%lld,%04x,%04x,%ld,%ld\r\n",
+		GetCursorPos(&pt);
+
+		sprintf(wt, "%lld,%04x,%04x,%ld,%ld,%ld,%ld\r\n",
 			current_timestamp,
 			raw->data.mouse.usButtonFlags,
 			raw->data.mouse.usButtonData,
 			raw->data.mouse.lLastX,
-			raw->data.mouse.lLastY);
+			raw->data.mouse.lLastY,
+			pt.x,
+			pt.y);
 
 		WriteFile(hFile, wt, strlen(wt), &fWritten, 0);
 		delete[] lpb;	// free this now
 		return 0;
-
 
 	}// end case WM_INPUT
 
@@ -179,7 +184,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		return DefWindowProc(hWnd, message, wParam, lParam);
 
 	}// end switch
-
 
 	return 0;
 }// end WndProc

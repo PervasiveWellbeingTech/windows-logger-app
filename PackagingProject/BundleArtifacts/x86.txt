@@ -1,1 +1,0 @@
-MainPackage=C:\Users\Hugo\source\repos\MouseLogger\PackagingProject\bin\x86\Debug\PackagingProject_1.0.0.0_x86_Debug.appx

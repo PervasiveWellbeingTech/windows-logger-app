@@ -78,11 +78,11 @@ Indeed, we change the storage file every hour of inactivity, which means that if
 
 
 ### Links that helped me to build this application
-Win32 app documentation: https://docs.microsoft.com/en-us/windows/win32/
-Window app with Visual Studio: https://docs.microsoft.com/en-us/cpp/windows/walkthrough-creating-windows-desktop-applications-cpp?view=vs-2019
+Win32 app documentation: https://docs.microsoft.com/en-us/windows/win32/  
+Window app with Visual Studio: https://docs.microsoft.com/en-us/cpp/windows/walkthrough-creating-windows-desktop-applications-cpp?view=vs-2019  
 
-Detailed explanation for a keylogger app: https://www.codeproject.com/Articles/297312/Minimal-Key-Logger-using-RAWINPUT
+Detailed explanation for a keylogger app: https://www.codeproject.com/Articles/297312/Minimal-Key-Logger-using-RAWINPUT  
 
-RAWINPUT: https://docs.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-rawinput?redirectedfrom=MSDN
-RAWINPUT (mouse): https://docs.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-rawmouse
-GetCursorPos: https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getcursorpos?redirectedfrom=MSDN
+RAWINPUT: https://docs.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-rawinput?redirectedfrom=MSDN  
+RAWINPUT (mouse): https://docs.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-rawmouse  
+GetCursorPos: https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getcursorpos?redirectedfrom=MSDN  

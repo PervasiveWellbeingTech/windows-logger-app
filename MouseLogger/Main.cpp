@@ -20,8 +20,9 @@ UINT64 nextFileTimestamp = std::chrono::duration_cast<std::chrono::milliseconds>
 wchar_t tempBuffer[50];
 wchar_t * currentTimestamp = _i64tow(nextFileTimestamp, tempBuffer, 10);
 
+std::wstring folderName = L"data";
 std::wstring name(currentTimestamp);
-std::wstring concattedStdstr = L"data/" + name + L".log";
+std::wstring concattedStdstr = folderName + L"/" + name + L".log";
 LPCWSTR fName = concattedStdstr.c_str();
 
 UINT64 newFilePeriod = 3600000;  // in milliseconds
@@ -64,7 +65,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 	case WM_CREATE: {
 		// open log file for writing
-		hFile = CreateFile(fName, GENERIC_WRITE, FILE_SHARE_READ, 0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+		if (CreateDirectory(folderName.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError()) {
+			hFile = CreateFile(fName, GENERIC_WRITE, FILE_SHARE_READ, 0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+		}
+		
 		if (hFile == INVALID_HANDLE_VALUE) {
 			PostQuitMessage(0);
 			break;
@@ -116,7 +120,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			fName = concattedStdstr.c_str();
 
 			CloseHandle(hFile);
-			hFile = CreateFile(fName, GENERIC_WRITE, FILE_SHARE_READ, 0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+			if (CreateDirectory(folderName.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError()) {
+				hFile = CreateFile(fName, GENERIC_WRITE, FILE_SHARE_READ, 0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+			}
+
 			if (hFile == INVALID_HANDLE_VALUE) {
 				PostQuitMessage(0);
 				break;

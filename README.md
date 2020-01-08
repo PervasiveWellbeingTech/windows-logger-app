@@ -66,9 +66,9 @@ raw->data.mouse.lLastX,
 raw->data.mouse.lLastY,
 ```
 
-`usButtonFlags` contains an hexadecimal number that corresponds to the mouse state, see the "RAWINPUT (mouse)" link at the bottom to interpret this number.
-`usButtonData` contains the mouse wheel "value" when the mouse wheel is used.
-`lLastX` and `lLastY` represent x and y motions of the mouse
+`usButtonFlags` contains an hexadecimal number that corresponds to the mouse state, see the "RAWINPUT (mouse)" link at the bottom to interpret this number.  
+`usButtonData` contains the mouse wheel "value" when the mouse wheel is used (cf. "Mouse wheel" link at the bottom for more information on this value).  
+`lLastX` and `lLastY` represent x and y motions of the mouse  
 (cf. RAWINPUT links for more details)
 
 To get the cursor position on the screen we also use the `GetCursorPos` function.
@@ -87,4 +87,5 @@ Detailed explanation for a keylogger app: https://www.codeproject.com/Articles/2
 
 RAWINPUT: https://docs.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-rawinput?redirectedfrom=MSDN  
 RAWINPUT (mouse): https://docs.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-rawmouse  
+Mouse wheel: https://docs.microsoft.com/en-us/windows/win32/learnwin32/other-mouse-operations#mouse-wheel
 GetCursorPos: https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getcursorpos?redirectedfrom=MSDN  

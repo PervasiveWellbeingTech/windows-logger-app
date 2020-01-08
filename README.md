@@ -11,7 +11,7 @@ More precisely:
 - Download the executable file **MouseLogger.exe** in the **Release** folder
 - Put it in a folder
 - Double click on **MouseLogger.exe** to launch it
-- The application is now running and a new file has been created to store data
+- The application is now running and a new file has been created and stored in the **data** folder
 
 ## Code
 
@@ -66,7 +66,7 @@ raw->data.mouse.lLastX,
 raw->data.mouse.lLastY,
 ```
 
-`usButtonFlags` is set to "0400" (hexadecimal) when the mouse wheel is used, otherwise it is "0000".
+`usButtonFlags` contains an hexadecimal number that corresponds to the mouse state, see the "RAWINPUT (mouse)" link at the bottom to interpret this number.
 `usButtonData` contains the mouse wheel "value" when the mouse wheel is used.
 `lLastX` and `lLastY` represent x and y motions of the mouse
 (cf. RAWINPUT links for more details)
@@ -75,6 +75,8 @@ To get the cursor position on the screen we also use the `GetCursorPos` function
 
 Another thing we do when we receive a `WM_INPUT` message is to check the time.
 Indeed, we change the storage file every hour of inactivity, which means that if the mouse is not used for one hour, we will create a new file to store data. It avoids us having all the data in a single file and allows us to divide them into kind of "user sessions".
+
+Lines are stored in this format: `timestamp,usButtonFlags,usButtonData,lLastX,lLastY,cursorX,cursorY` (timestamp in milliseconds).
 
 
 ### Links that helped me to build this application

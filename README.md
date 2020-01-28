@@ -8,10 +8,16 @@ More precisely:
 
 ## How to use it ?
 
-- Download the executable file **MouseLogger.exe** in the **Release** folder
+- Download the executable file **MouseLogger.exe** in the **Release** folder (or you can directly click on this link: https://github.com/PervasiveWellbeingTech/windows-logger-app/blob/master/Release/MouseLogger.exe)
 - Put it in a folder
 - Double click on **MouseLogger.exe** to launch it
 - The application is now running and a new file has been created and stored in the **data** folder
+
+### How to start the app automatically when the computer starts ?
+
+- Copy **MouseLogger.exe** (right click on it and select "Copy")
+- Copy this **%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup** and paste it in the Windows search bar (bottom left of the screen)
+- Right click on the new window and select "Paste shortcut"
 
 ## Code
 

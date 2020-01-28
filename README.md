@@ -15,9 +15,10 @@ More precisely:
 
 ### How to start the app automatically when the computer starts ?
 
-- Copy **MouseLogger.exe** (right click on it and select "Copy")
 - Copy this **%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup** and paste it in the Windows search bar (bottom left of the screen)
-- Right click on the new window and select "Paste shortcut"
+- Press Enter, a new window will appear (all programs contained is this startup folder/window will be launched when the computer starts)
+- Copy **MouseLogger.exe** (right click on it and select "Copy")
+- Right click in the "startup" window and select "Paste shortcut"
 
 ## Code
 

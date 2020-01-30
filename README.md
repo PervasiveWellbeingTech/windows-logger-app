@@ -96,3 +96,5 @@ RAWINPUT: https://docs.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-
 RAWINPUT (mouse): https://docs.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-rawmouse  
 Mouse wheel: https://docs.microsoft.com/en-us/windows/win32/learnwin32/other-mouse-operations#mouse-wheel
 GetCursorPos: https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getcursorpos?redirectedfrom=MSDN  
+
+Toast (notification): https://github.com/mohabouje/WinToast

@@ -5,8 +5,10 @@
 #include <stdio.h>
 #include <chrono>
 #include <string>
+#include <wintoastlib.h>
 
 using namespace std;
+using namespace WinToastLib;
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
@@ -58,12 +60,68 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	return 0;
 }
 
+class CustomHandler : public IWinToastHandler {
+public:
+	void toastActivated() const {
+		std::wcout << L"The user clicked in this toast" << std::endl;
+		ShellExecute(NULL, L"open", L"https://www.qualtrics.com/lp/survey-platform", nullptr, nullptr, SW_SHOWNORMAL);
+	}
+
+	void toastActivated(int actionIndex) const {
+		std::wcout << L"The user clicked on button #" << actionIndex << L" in this toast" << std::endl;
+	}
+
+	void toastFailed() const {
+		std::wcout << L"Error showing current toast" << std::endl;
+	}
+	void toastDismissed(WinToastDismissalReason state) const {
+		switch (state) {
+		case UserCanceled:
+			std::wcout << L"The user dismissed this toast" << std::endl;
+			break;
+		case ApplicationHidden:
+			std::wcout << L"The application hid the toast using ToastNotifier.hide()" << std::endl;
+			break;
+		case TimedOut:
+			std::wcout << L"The toast has timed out" << std::endl;
+			break;
+		default:
+			std::wcout << L"Toast not activated" << std::endl;
+			break;
+		}
+	}
+};
+
 // WndProc is called when a window message is sent to the handle of the window
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	switch (message) {
 
 	case WM_CREATE: {
+
+		if (!WinToast::isCompatible()) {
+			std::wcout << L"Error, your system in not supported!" << std::endl;
+		}
+
+		WinToast::instance()->setAppName(L"Stanford PWT Lab");
+		
+		// companyName, productName, subProduct, versionInformation
+		const auto aumi = WinToast::configureAUMI(L"StanfordPWTLab", L"windows_logger", L"windows_logger", L"20200130");
+		WinToast::instance()->setAppUserModelId(aumi);
+
+		if (!WinToast::instance()->initialize()) {
+			std::wcout << L"Error, could not initialize the lib!" << std::endl;
+		}
+
+		CustomHandler* handler = new CustomHandler;
+		WinToastTemplate templ = WinToastTemplate(WinToastTemplate::Text02);
+		templ.setTextField(L"Stanford PWT Lab", WinToastTemplate::FirstLine);
+		templ.setTextField(L"If you have the time to answer a survey, click on this notification", WinToastTemplate::SecondLine);
+
+		if (!WinToast::instance()->showToast(templ, handler)) {
+			std::wcout << L"Error: Could not launch your toast notification!" << std::endl;
+		}
+
 		// open log file for writing
 		if (CreateDirectory(folderName.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError()) {
 			hFile = CreateFile(fName, GENERIC_WRITE, FILE_SHARE_READ, 0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
@@ -133,7 +191,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 		PRAWINPUT raw = (PRAWINPUT)lpb;
 		CHAR wt[300] = "";
-		GetCursorPos(&cursorPoint);
+		GetCursorPos(&cursorPoint);		
 
 		sprintf(wt, "%lld,%04x,%04x,%ld,%ld,%ld,%ld\r\n",
 			currentTimestamp,

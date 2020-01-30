@@ -8,10 +8,17 @@ More precisely:
 
 ## How to use it ?
 
-- Download the executable file **MouseLogger.exe** in the **Release** folder
+- Download the executable file **MouseLogger.exe** in the **Release** folder (or you can directly click on this link: https://github.com/PervasiveWellbeingTech/windows-logger-app/blob/master/Release/MouseLogger.exe)
 - Put it in a folder
 - Double click on **MouseLogger.exe** to launch it
-- The application is now running and a new file has been created to store data
+- The application is now running and a new file has been created and stored in the **data** folder
+
+### How to start the app automatically when the computer starts ?
+
+- Copy this **%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup** and paste it in the Windows search bar (bottom left of the screen)
+- Press Enter, a new window will appear (all programs contained is this startup folder/window will be launched when the computer starts)
+- Copy **MouseLogger.exe** (right click on it and select "Copy")
+- Right click in the "startup" window and select "Paste shortcut"
 
 ## Code
 
@@ -66,15 +73,17 @@ raw->data.mouse.lLastX,
 raw->data.mouse.lLastY,
 ```
 
-`usButtonFlags` is set to "0400" (hexadecimal) when the mouse wheel is used, otherwise it is "0000".
-`usButtonData` contains the mouse wheel "value" when the mouse wheel is used.
-`lLastX` and `lLastY` represent x and y motions of the mouse
+`usButtonFlags` contains an hexadecimal number that corresponds to the mouse state, see the "RAWINPUT (mouse)" link at the bottom to interpret this number.  
+`usButtonData` contains the mouse wheel "value" when the mouse wheel is used (cf. "Mouse wheel" link at the bottom for more information on this value).  
+`lLastX` and `lLastY` represent x and y motions of the mouse  
 (cf. RAWINPUT links for more details)
 
 To get the cursor position on the screen we also use the `GetCursorPos` function.
 
 Another thing we do when we receive a `WM_INPUT` message is to check the time.
 Indeed, we change the storage file every hour of inactivity, which means that if the mouse is not used for one hour, we will create a new file to store data. It avoids us having all the data in a single file and allows us to divide them into kind of "user sessions".
+
+Lines are stored in this format: `timestamp,usButtonFlags,usButtonData,lLastX,lLastY,cursorX,cursorY` (timestamp in milliseconds).
 
 
 ### Links that helped me to build this application
@@ -85,4 +94,5 @@ Detailed explanation for a keylogger app: https://www.codeproject.com/Articles/2
 
 RAWINPUT: https://docs.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-rawinput?redirectedfrom=MSDN  
 RAWINPUT (mouse): https://docs.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-rawmouse  
+Mouse wheel: https://docs.microsoft.com/en-us/windows/win32/learnwin32/other-mouse-operations#mouse-wheel
 GetCursorPos: https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getcursorpos?redirectedfrom=MSDN  

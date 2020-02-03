@@ -7,10 +7,10 @@
 #include <string>
 #include <wintoastlib.h>
 
+#define INFO_BUFFER_SIZE 32767
+
 using namespace std;
 using namespace WinToastLib;
-
-#define INFO_BUFFER_SIZE 32767
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
@@ -20,17 +20,17 @@ DWORD fWritten;
 WCHAR keyChar;
 HANDLE hFile;
 LPCWSTR computerName;
+UINT64 newFilePeriod = 3600000;  // in milliseconds
 
 UINT64 nextFileTimestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 wchar_t tempBuffer[50];
 wchar_t * currentTimestamp = _i64tow(nextFileTimestamp, tempBuffer, 10);
 
-std::wstring folderName = L"data/raw_input";
+std::wstring computerFolderName = L"data/computer/";
+std::wstring folderName = L"data/raw_input/";
 std::wstring name(currentTimestamp);
-std::wstring concattedStdstr = folderName + L"/" + name + L".log";
+std::wstring concattedStdstr = folderName + name + L".log";
 LPCWSTR fName = concattedStdstr.c_str();
-
-UINT64 newFilePeriod = 3600000;  // in milliseconds
 
 INT len;
 CHAR pWindowTitle[256] = "";
@@ -39,7 +39,21 @@ CHAR* tmpBuf;
 CHAR tmpBufLen = 0;
 RAWINPUTDEVICE rid;
 
-POINT cursorPoint;  
+POINT cursorPoint;
+
+int openFile(LPCWSTR fileName, LPCWSTR folderName) {
+	// Open log file for writing
+	if (CreateDirectory(folderName, NULL) || ERROR_ALREADY_EXISTS == GetLastError()) {
+		hFile = CreateFile(fileName, GENERIC_WRITE, FILE_SHARE_READ, 0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+	}
+
+	if (hFile == INVALID_HANDLE_VALUE) {
+		PostQuitMessage(0);
+		return -1;
+	}
+
+	return 0;
+}
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
@@ -102,39 +116,30 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 	case WM_CREATE: {
 
+		// Setup the "computer file" which contains general information about computer, users, sessions
 		TCHAR infoBuf[INFO_BUFFER_SIZE];
 		DWORD bufCharCount = INFO_BUFFER_SIZE;
 
-		// Get and display the name of the computer. 
-		bufCharCount = INFO_BUFFER_SIZE;
-		if (!GetComputerName(infoBuf, &bufCharCount)) {
-			std::wcout << L"GetComputerName error" << std::endl;
-		}
-		
-		std::wstring folderName = L"data/computer";
-		name = infoBuf;
-		std::wstring concattedStdstr = folderName + L"/" + name + L".log";
+		GetComputerName(infoBuf, &bufCharCount);  // Get the name of the computer and store it in infoBuf
+		std::wstring computerName(infoBuf);
+		std::wstring concattedStdstr = computerFolderName + computerName + L".log";
 		fName = concattedStdstr.c_str();
 
-		// open log file for writing
-		if (CreateDirectory(folderName.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError()) {
-			hFile = CreateFile(fName, GENERIC_WRITE, FILE_SHARE_READ, 0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
-		}
-
-		if (hFile == INVALID_HANDLE_VALUE) {
-			PostQuitMessage(0);
+		// The opened file is the object hFile
+		if (openFile(fName, computerFolderName.c_str()) == -1) {
 			break;
 		}
-
-		SetFilePointer(hFile, 0, NULL, FILE_END);
-		CHAR wt[300] = "";
+		SetFilePointer(hFile, 0, NULL, FILE_END);     // Set the cursor at the end of the file
+		
 		UINT64 startTimestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
+		CHAR wt[300] = "";
 		sprintf(wt, "Computer name: %ls\r\n%lld,connection\r\n",
-			name.c_str(),
+			computerName.c_str(),
 			startTimestamp);
 		WriteFile(hFile, wt, strlen(wt), &fWritten, 0);
 
+		// Setup the toast
 		if (!WinToast::isCompatible()) {
 			std::wcout << L"Error, your system in not supported!" << std::endl;
 		}
@@ -162,9 +167,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		wchar_t tempBuffer[50];
 		wchar_t* currentTimestamp = _i64tow(nextFileTimestamp, tempBuffer, 10);
 
-		folderName = L"data/raw_input";
+		folderName = L"data/raw_input/";
 		name = currentTimestamp;
-		concattedStdstr = folderName + L"/" + name + L".log";
+		concattedStdstr = folderName + name + L".log";
 		fName = concattedStdstr.c_str();
 
 		// open log file for writing
@@ -211,7 +216,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		}
 		
-		// Check the time to see if we have to create a new file or not
+		// Check the time to see if we have to create a new file or not,
+		// because every newFilePeriod-milliseconds we create a new file (to avoid big files)
 		UINT64 currentTimestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
 		if (currentTimestamp > nextFileTimestamp) {
@@ -248,14 +254,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			cursorPoint.y);
 
 		WriteFile(hFile, wt, strlen(wt), &fWritten, 0);
-		delete[] lpb;  // free this now
-		return 0;
+		delete[] lpb;
 
+		return 0;
 	}// end case WM_INPUT
 
 	default:
 		return DefWindowProc(hWnd, message, wParam, lParam);
-
 	}// end switch
 
 	return 0;

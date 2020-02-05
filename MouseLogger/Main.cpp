@@ -18,7 +18,6 @@ HWND hWnd, hActiveWindow, hPrevWindow;
 UINT dwSize;
 DWORD fWritten;
 WCHAR keyChar;
-HANDLE hFile;
 LPCWSTR computerName;
 UINT64 newFilePeriod = 3600000;  // in milliseconds
 
@@ -41,13 +40,33 @@ RAWINPUTDEVICE rid;
 
 POINT cursorPoint;
 
+class FileManager {
+public:
+	std::wstring computerFolderName = L"data/computer/";
+	std::wstring rawInputFolderName = L"data/raw_input/";
+	LPCWSTR fileName = L"0000000000000";
+	HANDLE hFile;
+
+	LPCWSTR fileNameA = L"data/computer/test_a.log";
+	LPCWSTR fileNameB = L"data/computer/test_b.log";
+	HANDLE aFile;
+	HANDLE bFile;
+
+	LPCWSTR computerFileName;
+	LPCWSTR rawInputFileName;
+	HANDLE computerFile;
+	HANDLE rawInputFile;
+};
+
+FileManager fileManager;
+
 int openFile(LPCWSTR fileName, LPCWSTR folderName) {
 	// Open log file for writing
 	if (CreateDirectory(folderName, NULL) || ERROR_ALREADY_EXISTS == GetLastError()) {
-		hFile = CreateFile(fileName, GENERIC_WRITE, FILE_SHARE_READ, 0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+		fileManager.hFile = CreateFile(fileName, GENERIC_WRITE, FILE_SHARE_READ, 0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
 	}
 
-	if (hFile == INVALID_HANDLE_VALUE) {
+	if (fileManager.hFile == INVALID_HANDLE_VALUE) {
 		PostQuitMessage(0);
 		return -1;
 	}
@@ -55,9 +74,32 @@ int openFile(LPCWSTR fileName, LPCWSTR folderName) {
 	return 0;
 }
 
+UINT64 getCurrentTimestamp() {
+	return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
+std::wstring getComputerName() {
+	TCHAR infoBuf[INFO_BUFFER_SIZE];
+	DWORD bufCharCount = INFO_BUFFER_SIZE;
+
+	GetComputerName(infoBuf, &bufCharCount);  // Get the name of the computer and store it in infoBuf
+	return infoBuf;
+}
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
 	nextFileTimestamp = nextFileTimestamp + newFilePeriod;
+
+	fileManager.aFile = CreateFile(fileManager.fileNameA, GENERIC_WRITE, FILE_SHARE_READ, 0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+	fileManager.bFile = CreateFile(fileManager.fileNameB, GENERIC_WRITE, FILE_SHARE_READ, 0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+
+	CHAR wta[300] = "";
+	sprintf(wta, "%lld,bla bla test a\r\n", getCurrentTimestamp());
+	WriteFile(fileManager.aFile, wta, strlen(wta), &fWritten, 0);
+
+	CHAR wtb[300] = "";
+	sprintf(wtb, "%lld,bla bla test b\r\n", getCurrentTimestamp());
+	WriteFile(fileManager.bFile, wtb, strlen(wtb), &fWritten, 0);
 
 	MSG msg = { 0 };
 	WNDCLASS wc = { 0 };
@@ -79,8 +121,42 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 class CustomHandler : public IWinToastHandler {
 public:
+
 	void toastActivated() const {
-		std::wcout << L"The user clicked in this toast" << std::endl;
+		OutputDebugString(L"The user clicked in this toast\n");
+
+		std::wstring computerFileName = computerFolderName + getComputerName() + L".log";
+		//openFile(fileName.c_str(), L"data/computer/");
+
+		if (CreateDirectory(computerFolderName.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError()) {
+			fileManager.hFile = CreateFile(computerFileName.c_str(), GENERIC_WRITE, FILE_SHARE_READ, 0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+			SetFilePointer(fileManager.hFile, 0, NULL, FILE_END);  // Set the cursor at the end of the file
+
+			CHAR wt[300] = "";
+			sprintf(wt, "%lld,toast activated\r\n", getCurrentTimestamp());
+			WriteFile(fileManager.hFile, wt, strlen(wt), &fWritten, 0);
+			CloseHandle(fileManager.hFile);
+		}
+
+		if (CreateDirectory(fileManager.rawInputFolderName.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError()) {
+			OutputDebugString(fileManager.fileName);
+			OutputDebugString(L"\n");
+			fileManager.hFile = CreateFile(fileManager.fileName, GENERIC_WRITE, FILE_SHARE_READ, 0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+			SetFilePointer(fileManager.hFile, 0, NULL, FILE_END);  // Set the cursor at the end of the file
+
+			CHAR wt[300] = "";
+			sprintf(wt, "%lld,toast activated AGAAAIN\r\n", getCurrentTimestamp());
+			WriteFile(fileManager.hFile, wt, strlen(wt), &fWritten, 0);
+			OutputDebugString(fileManager.fileName);
+			OutputDebugString(L"\n");
+		}
+		else {
+			OutputDebugString(L"NUL...\n");
+		}
+
+		CHAR wtComputer[300] = "";
+		sprintf(wtComputer, "%lld,toast activated\r\n", getCurrentTimestamp());
+		WriteFile(fileManager.computerFile, wtComputer, strlen(wtComputer), &fWritten, 0);
 		ShellExecute(NULL, L"open", L"https://www.qualtrics.com/lp/survey-platform", nullptr, nullptr, SW_SHOWNORMAL);
 	}
 
@@ -123,13 +199,23 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		GetComputerName(infoBuf, &bufCharCount);  // Get the name of the computer and store it in infoBuf
 		std::wstring computerName(infoBuf);
 		std::wstring concattedStdstr = computerFolderName + computerName + L".log";
-		fName = concattedStdstr.c_str();
+		fileManager.computerFileName = concattedStdstr.c_str();
 
-		// The opened file is the object hFile
-		if (openFile(fName, computerFolderName.c_str()) == -1) {
+		// The opened file is the object fileManager.hFile
+		/*
+		if (openFile(computerfName, computerFolderName.c_str()) == -1) {
 			break;
 		}
-		SetFilePointer(hFile, 0, NULL, FILE_END);     // Set the cursor at the end of the file
+		*/
+		if (CreateDirectory(fileManager.computerFolderName.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError()) {
+			fileManager.computerFile = CreateFile(fileManager.computerFileName, GENERIC_WRITE, FILE_SHARE_READ, 0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+		}
+
+		if (fileManager.computerFile == INVALID_HANDLE_VALUE) {
+			PostQuitMessage(0);
+			return -1;
+		}
+		SetFilePointer(fileManager.computerFile, 0, NULL, FILE_END);  // Set the cursor at the end of the file
 		
 		UINT64 startTimestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
@@ -137,7 +223,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		sprintf(wt, "Computer name: %ls\r\n%lld,connection\r\n",
 			computerName.c_str(),
 			startTimestamp);
-		WriteFile(hFile, wt, strlen(wt), &fWritten, 0);
+		WriteFile(fileManager.computerFile, wt, strlen(wt), &fWritten, 0);
 
 		// Setup the toast
 		if (!WinToast::isCompatible()) {
@@ -162,25 +248,52 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		if (!WinToast::instance()->showToast(templ, handler)) {
 			std::wcout << L"Error: Could not launch your toast notification!" << std::endl;
 		}
+		else {
+			CHAR wt[300] = "";
+			sprintf(wt, "%lld,first survey toasted\r\n", getCurrentTimestamp());
+			WriteFile(fileManager.computerFile, wt, strlen(wt), &fWritten, 0);
+			//CloseHandle(fileManager.computerFile);  // Close the file
+		}
 
 		nextFileTimestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		wchar_t tempBuffer[50];
 		wchar_t* currentTimestamp = _i64tow(nextFileTimestamp, tempBuffer, 10);
 
-		folderName = L"data/raw_input/";
+		//folderName = L"data/raw_input/";
+		/*
 		name = currentTimestamp;
 		concattedStdstr = folderName + name + L".log";
 		fName = concattedStdstr.c_str();
+		*/
 
 		// open log file for writing
+		/*
 		if (CreateDirectory(folderName.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError()) {
-			hFile = CreateFile(fName, GENERIC_WRITE, FILE_SHARE_READ, 0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+			fileManager.hFile = CreateFile(fName, GENERIC_WRITE, FILE_SHARE_READ, 0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
 		}
 		
-		if (hFile == INVALID_HANDLE_VALUE) {
+		if (fileManager.hFile == INVALID_HANDLE_VALUE) {
 			PostQuitMessage(0);
 			break;
 		}
+		SetFilePointer(fileManager.hFile, 0, NULL, FILE_END);  // Set the cursor at the end of the file
+
+		fileManager.fileName = fName;
+		*/
+
+		name = currentTimestamp;
+		concattedStdstr = fileManager.rawInputFolderName + name + L".log";
+		fileManager.rawInputFileName = concattedStdstr.c_str();
+
+		if (CreateDirectory(fileManager.computerFolderName.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError()) {
+			fileManager.rawInputFile = CreateFile(fileManager.rawInputFileName, GENERIC_WRITE, FILE_SHARE_READ, 0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+		}
+
+		if (fileManager.rawInputFile == INVALID_HANDLE_VALUE) {
+			PostQuitMessage(0);
+			return -1;
+		}
+		SetFilePointer(fileManager.rawInputFile, 0, NULL, FILE_END);  // Set the cursor at the end of the file
 
 		// register interest in raw data
 		rid.dwFlags = RIDEV_NOLEGACY | RIDEV_INPUTSINK;	
@@ -192,8 +305,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	}// end case WM_CREATE
 
 	case WM_DESTROY: {
-		FlushFileBuffers(hFile);
-		CloseHandle(hFile);
+		FlushFileBuffers(fileManager.hFile);
+		CloseHandle(fileManager.hFile);
 		PostQuitMessage(0);
 		break;
 	}// end case WM_DESTROY
@@ -218,6 +331,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		
 		// Check the time to see if we have to create a new file or not,
 		// because every newFilePeriod-milliseconds we create a new file (to avoid big files)
+		// TODO: update with new fileManager
 		UINT64 currentTimestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
 		if (currentTimestamp > nextFileTimestamp) {
@@ -228,15 +342,25 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			std::wstring concattedStdstr = L"data/raw_input/" + name + L".log";
 			fName = concattedStdstr.c_str();
 
-			CloseHandle(hFile);
+			CloseHandle(fileManager.hFile);
 			if (CreateDirectory(folderName.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError()) {
-				hFile = CreateFile(fName, GENERIC_WRITE, FILE_SHARE_READ, 0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+				fileManager.hFile = CreateFile(fileManager.fileName, GENERIC_WRITE, FILE_SHARE_READ, 0, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
 			}
 
-			if (hFile == INVALID_HANDLE_VALUE) {
+			if (fileManager.hFile == INVALID_HANDLE_VALUE) {
 				PostQuitMessage(0);
 				break;
 			}
+
+			//fileManager.fileName = L"new_test_file_test";
+
+			OutputDebugString(L"MANAAAAAAAGER\n");
+			OutputDebugString(fileManager.fileName);
+			OutputDebugString(L"\n");
+
+			OutputDebugString(L"AM I HEREEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE ?\n");
+			OutputDebugString(fName);
+			OutputDebugString(L"\n");
 		}
 		nextFileTimestamp = currentTimestamp + newFilePeriod;
 
@@ -253,7 +377,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			cursorPoint.x,
 			cursorPoint.y);
 
-		WriteFile(hFile, wt, strlen(wt), &fWritten, 0);
+		wchar_t* displayTimestamp = _i64tow(currentTimestamp, tempBuffer, 10);
+
+		OutputDebugString(displayTimestamp);
+		OutputDebugString(L"\n");
+		OutputDebugString(fileManager.fileName);
+		OutputDebugString(L"\n");
+		
+		WriteFile(fileManager.rawInputFile, wt, strlen(wt), &fWritten, 0);
+
 		delete[] lpb;
 
 		return 0;

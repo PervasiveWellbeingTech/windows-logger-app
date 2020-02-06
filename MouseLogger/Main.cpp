@@ -19,10 +19,7 @@ UINT dwSize;
 DWORD fWritten;
 WCHAR keyChar;
 UINT64 newFilePeriod = 3600;  // in milliseconds
-
-UINT64 nextFileTimestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-wchar_t tempBuffer[50];
-wchar_t * currentTimestamp = _i64tow(nextFileTimestamp, tempBuffer, 10);
+UINT64 nextFileTimestamp;     // used to determine when we have to create a new log file
 
 INT len;
 CHAR pWindowTitle[256] = "";
@@ -42,6 +39,14 @@ std::wstring getComputerName() {
 	DWORD bufCharCount = INFO_BUFFER_SIZE;
 
 	GetComputerName(infoBuf, &bufCharCount);  // Get the name of the computer and store it in infoBuf
+	return infoBuf;
+}
+
+std::wstring getUserName() {
+	TCHAR infoBuf[INFO_BUFFER_SIZE];
+	DWORD bufCharCount = INFO_BUFFER_SIZE;
+
+	GetUserName(infoBuf, &bufCharCount);  // Get the user name and store it in infoBuf
 	return infoBuf;
 }
 
@@ -76,7 +81,6 @@ class CustomHandler : public IWinToastHandler {
 public:
 
 	void toastActivated() const {
-		OutputDebugString(L"INFO,toast activated\n");
 		CHAR message[300] = "";
 		sprintf(message, "%lld,INFO,toast activated\r\n", getCurrentTimestamp());
 		WriteFile(fileManager.computerFile, message, strlen(message), &fWritten, 0);
@@ -88,7 +92,6 @@ public:
 	}
 
 	void toastFailed() const {
-		std::wcout << L"Error showing current toast" << std::endl;
 		CHAR message[300] = "";
 		sprintf(message, "%lld,WARNING,toast failed\r\n", getCurrentTimestamp());
 		WriteFile(fileManager.computerFile, message, strlen(message), &fWritten, 0);
@@ -98,11 +101,12 @@ public:
 		CHAR message[300] = "";
 		switch (state) {
 		case UserCanceled:
-			sprintf(message, "%lld,INFO,toast dismissed\r\n", getCurrentTimestamp());
+			sprintf(message, "%lld,INFO,toast manually closed\r\n", getCurrentTimestamp());
 			WriteFile(fileManager.computerFile, message, strlen(message), &fWritten, 0);
 			break;
 		case ApplicationHidden:
-			std::wcout << L"The application hid the toast using ToastNotifier.hide()" << std::endl;
+			sprintf(message, "%lld,INFO,toast hidden by application\r\n", getCurrentTimestamp());
+			WriteFile(fileManager.computerFile, message, strlen(message), &fWritten, 0);
 			break;
 		case TimedOut:
 			sprintf(message, "%lld,INFO,toast timed out\r\n", getCurrentTimestamp());
@@ -121,6 +125,7 @@ WinToastTemplate templ = WinToastTemplate(WinToastTemplate::Text02);
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
+	nextFileTimestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	nextFileTimestamp = nextFileTimestamp + newFilePeriod;
 
 	// Setup the "computer" file which contains general information about computer, users, sessions
@@ -130,7 +135,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	// Setup the toast
 	if (!WinToast::isCompatible()) {
-		std::wcout << L"Error, your system in not supported!" << std::endl;
+		CHAR message[300] = "";
+		sprintf(message, "%lld,ERROR,system does not support toast\r\n", getCurrentTimestamp());
+		WriteFile(fileManager.computerFile, message, strlen(message), &fWritten, 0);
 	}
 	WinToast::instance()->setAppName(L"Stanford PWT Lab");
 
@@ -139,7 +146,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	WinToast::instance()->setAppUserModelId(aumi);
 
 	if (!WinToast::instance()->initialize()) {
-		std::wcout << L"Error, could not initialize the lib!" << std::endl;
+		CHAR message[300] = "";
+		sprintf(message, "%lld,ERROR,could not initialize toast lib\r\n", getCurrentTimestamp());
+		WriteFile(fileManager.computerFile, message, strlen(message), &fWritten, 0);
 	}
 
 	templ.setTextField(L"Stanford PWT Lab", WinToastTemplate::FirstLine);
@@ -174,15 +183,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		// Log message: timestamp,INFO,connection[computer-name]
 		UINT64 startTimestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		CHAR message[300] = "";
-		sprintf(message, "%lld,INFO,connection[%ls]\r\n", startTimestamp, getComputerName().c_str());
+		sprintf(message, "%lld,INFO,connection[%ls][%ls]\r\n", startTimestamp, getComputerName().c_str(), getUserName().c_str());
 		WriteFile(fileManager.computerFile, message, strlen(message), &fWritten, 0);
 
 		// Setup the "raw input" file which contains all mouse data
 		wchar_t tempBuffer[50];
-		wchar_t* currentTimestamp = _i64tow(getCurrentTimestamp(), tempBuffer, 10);
+		wchar_t* currentTimestamp = _i64tow(startTimestamp, tempBuffer, 10);
 
-		std::wstring name = currentTimestamp;
-		std::wstring concattedStdstr = fileManager.rawInputFolderName + name + L".log";
+		std::wstring fileName = currentTimestamp;
+		std::wstring concattedStdstr = fileManager.rawInputFolderName + fileName + L".log";
 		fileManager.rawInputFileName = concattedStdstr.c_str();
 
 		if (openFile(fileManager.rawInputFileName, fileManager.rawInputFolderName.c_str(), fileManager.rawInputFile) == 0) {
@@ -193,7 +202,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 		// Display a toast
 		if (!WinToast::instance()->showToast(templ, handler)) {
-			std::wcout << L"Error: Could not launch your toast notification!" << std::endl;
+			CHAR message[300] = "";
+			sprintf(message, "%lld,ERROR,toast could not be launched\r\n", getCurrentTimestamp());
+			WriteFile(fileManager.computerFile, message, strlen(message), &fWritten, 0);
 		}
 		else {
 			CHAR message[300] = "";
@@ -201,7 +212,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			WriteFile(fileManager.computerFile, message, strlen(message), &fWritten, 0);
 		}
 
-		// register interest in raw data
+		// Choice of raw data we are interested in
 		rid.dwFlags = RIDEV_NOLEGACY | RIDEV_INPUTSINK;	
 		rid.usUsagePage = 1;
 		rid.usUsage = 2;
@@ -211,7 +222,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	}// end case WM_CREATE
 
 	case WM_DESTROY: {
-		OutputDebugString(L"WM_DESTROY called\n");
 		CHAR message[300] = "";
 		sprintf(message, "%lld,INFO,disconnection[%ls]\r\n", getCurrentTimestamp(), getComputerName().c_str());
 		WriteFile(fileManager.computerFile, message, strlen(message), &fWritten, 0);
@@ -261,23 +271,23 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				CHAR message[300] = "";
 				sprintf(message, "%lld,INFO,new raw input file created[%ls]\r\n", getCurrentTimestamp(), fileManager.rawInputFileName);
 				WriteFile(fileManager.computerFile, message, strlen(message), &fWritten, 0);
-				OutputDebugString(L"New raw input file created\n");
-				OutputDebugString(L"\n");
 			}
 
+			// Show a toast (temporary behavior)
 			if (!WinToast::instance()->showToast(templ, handler)) {
-				std::wcout << L"Error: Could not launch your toast notification!" << std::endl;
+				CHAR message[300] = "";
+				sprintf(message, "%lld,ERROR,toast could not be launched\r\n", getCurrentTimestamp());
+				WriteFile(fileManager.computerFile, message, strlen(message), &fWritten, 0);
 			}
 			else {
 				CHAR message[300] = "";
 				sprintf(message, "%lld,INFO,survey toasted\r\n", getCurrentTimestamp());
 				WriteFile(fileManager.computerFile, message, strlen(message), &fWritten, 0);
-				OutputDebugString(L"Notification toasted\n");
-				OutputDebugString(L"\n");
 			}
 		}
 		nextFileTimestamp = currentTimestamp + newFilePeriod;
 
+		// Storage of raw data in the "raw input" file
 		PRAWINPUT raw = (PRAWINPUT)lpb;
 		CHAR wt[300] = "";
 		GetCursorPos(&cursorPoint);		

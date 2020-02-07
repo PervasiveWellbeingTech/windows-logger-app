@@ -18,7 +18,7 @@ HWND hWnd, hActiveWindow, hPrevWindow;
 UINT dwSize;
 DWORD fWritten;
 WCHAR keyChar;
-UINT64 newFilePeriod = 3600;  // in milliseconds
+UINT64 newFilePeriod = 3600000;  // in milliseconds
 UINT64 nextFileTimestamp;     // used to determine when we have to create a new log file
 
 INT len;
@@ -84,7 +84,8 @@ public:
 		CHAR message[300] = "";
 		sprintf(message, "%lld,INFO,toast activated\r\n", getCurrentTimestamp());
 		WriteFile(fileManager.computerFile, message, strlen(message), &fWritten, 0);
-		ShellExecute(NULL, L"open", L"https://www.qualtrics.com/lp/survey-platform", nullptr, nullptr, SW_SHOWNORMAL);
+		std::wstring surveyLink = L"https://stanforduniversity.qualtrics.com/jfe/form/SV_23QKD9ueJfXlQrz?computer=" + getComputerName();
+		ShellExecute(NULL, L"open", surveyLink.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 	}
 
 	void toastActivated(int actionIndex) const {
@@ -121,7 +122,7 @@ public:
 };
 
 CustomHandler* handler = new CustomHandler;
-WinToastTemplate templ = WinToastTemplate(WinToastTemplate::Text02);
+WinToastTemplate templ = WinToastTemplate(WinToastTemplate::ImageAndText02);
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
@@ -153,6 +154,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	templ.setTextField(L"Stanford PWT Lab", WinToastTemplate::FirstLine);
 	templ.setTextField(L"If you have the time to answer a survey, click HERE", WinToastTemplate::SecondLine);
+
+	TCHAR buffer[MAX_PATH];
+	GetCurrentDirectory(MAX_PATH, buffer);
+	std::wstring link(buffer);
+	std::wstring imageLink = link + L"\\stanford_logo.png";
+	/*
+	CHAR message[300] = "";
+	sprintf(message, "LOGO[%ls]\r\n", imageLink.c_str());
+	WriteFile(fileManager.computerFile, message, strlen(message), &fWritten, 0);
+	*/
+
+	templ.setImagePath(imageLink);
 	
 	// Window setup
 	MSG msg = { 0 };
